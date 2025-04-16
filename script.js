@@ -1,6 +1,13 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+// خذ أبعاد الشاشة
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// حجم نسبي بناءً على الشاشة
+let unit = canvas.width / 10;
+
 // صور اللعبة
 let playerImg = new Image(); playerImg.src = "shaks_clean.png";
 let enemyImg = new Image(); enemyImg.src = "clean_enemy.png";
@@ -9,8 +16,14 @@ let leftArrow = new Image(); leftArrow.src = "left.png";
 let rightArrow = new Image(); rightArrow.src = "right.png";
 let shootIcon = new Image(); shootIcon.src = "shoot.png";
 
-// أحجام جديدة
-let player = { x: 165, y: 500, width: 70, height: 70 }; // شاكس أكبر
+// اللاعب
+let player = {
+  x: canvas.width / 2 - unit,
+  y: canvas.height - unit * 2,
+  width: unit * 1.5,
+  height: unit * 1.5,
+};
+
 let bullets = [], enemies = [];
 let score = 0;
 let leftPressed = false, rightPressed = false;
@@ -27,7 +40,7 @@ function restartGame() {
   enemies = [];
   score = 0;
   isGameOver = false;
-  player.x = 165; // وسط الشاشة مع الحجم الجديد
+  player.x = canvas.width / 2 - unit;
   requestAnimationFrame(gameLoop);
 }
 
@@ -42,7 +55,12 @@ document.addEventListener("keyup", (e) => {
 });
 
 function shoot() {
-  bullets.push({ x: player.x + 15, y: player.y, width: 40, height: 40 }); // طلقة أكبر
+  bullets.push({
+    x: player.x + player.width / 3,
+    y: player.y,
+    width: unit,
+    height: unit,
+  });
 }
 
 function drawPlayer() {
@@ -50,26 +68,33 @@ function drawPlayer() {
 }
 
 function drawBullets() {
-  bullets = bullets.filter((b) => b.y > -40);
+  bullets = bullets.filter((b) => b.y > -unit);
   bullets.forEach((b) => {
-    b.y -= 8; // سرعة أكبر للطلقة الكبيرة
+    b.y -= unit * 0.4;
     ctx.drawImage(bulletImg, b.x, b.y, b.width, b.height);
   });
 }
 
 function drawEnemies() {
   if (Math.random() < 0.02) {
-    enemies.push({ x: Math.random() * (canvas.width - 70), y: 0, width: 70, height: 70 }); // عدو أكبر
+    enemies.push({
+      x: Math.random() * (canvas.width - unit * 1.5),
+      y: 0,
+      width: unit * 1.5,
+      height: unit * 1.5,
+    });
   }
 
-  enemies = enemies.filter((e) => e.y < canvas.height + 70);
+  enemies = enemies.filter((e) => e.y < canvas.height + unit);
   enemies.forEach((e) => {
-    e.y += 2;
+    e.y += unit * 0.2;
     ctx.drawImage(enemyImg, e.x, e.y, e.width, e.height);
 
     bullets.forEach((b) => {
-      if (b.x < e.x + e.width && b.x + b.width > e.x &&
-          b.y < e.y + e.height && b.y + b.height > e.y) {
+      if (
+        b.x < e.x + e.width && b.x + b.width > e.x &&
+        b.y < e.y + e.height && b.y + b.height > e.y
+      ) {
         e.hit = true;
         b.hit = true;
         score += 10;
@@ -92,26 +117,27 @@ function drawEnemies() {
 
 function drawScore() {
   ctx.fillStyle = "#FFD700";
-  ctx.font = "30px monospace";
-  ctx.fillText("النقاط: " + score, 10, 40);
+  ctx.font = `${unit}px monospace`;
+  ctx.fillText("النقاط: " + score, unit * 0.5, unit * 1.5);
 }
 
-// أزرار بحجم أكبر
 function drawControls() {
-  ctx.drawImage(leftArrow, 20, 500, 80, 80);
-  ctx.drawImage(rightArrow, 110, 500, 80, 80);
-  ctx.drawImage(shootIcon, 300, 500, 80, 80);
+  const y = canvas.height - unit * 1.5;
+  ctx.drawImage(leftArrow, unit * 0.5, y, unit * 1.2, unit * 1.2);
+  ctx.drawImage(rightArrow, unit * 2.2, y, unit * 1.2, unit * 1.2);
+  ctx.drawImage(shootIcon, canvas.width - unit * 1.7, y, unit * 1.2, unit * 1.2);
+}
+
+function update() {
+  const moveSpeed = unit * 0.4;
+  if (leftPressed) player.x = Math.max(0, player.x - moveSpeed);
+  if (rightPressed) player.x = Math.min(canvas.width - player.width, player.x + moveSpeed);
 }
 
 function endGame() {
   isGameOver = true;
   document.getElementById("gameOverScreen").style.display = "flex";
   document.getElementById("finalScore").innerText = "النقاط: " + score;
-}
-
-function update() {
-  if (leftPressed) player.x = Math.max(0, player.x - 6); // زيادة السرعة عشان الحجم
-  if (rightPressed) player.x = Math.min(canvas.width - player.width, player.x + 6);
 }
 
 function gameLoop() {
@@ -126,22 +152,18 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-// نقاط الضغط الجديدة تناسب حجم الأزرار (80x80)
 canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
 
-  // زر اليسار
-  if (x >= 20 && x <= 100 && y >= 500 && y <= 580) {
-    player.x = Math.max(0, player.x - 30);
-  }
-  // زر اليمين
-  else if (x >= 110 && x <= 190 && y >= 500 && y <= 580) {
-    player.x = Math.min(canvas.width - player.width, player.x + 30);
-  }
-  // زر الإطلاق
-  else if (x >= 300 && x <= 380 && y >= 500 && y <= 580) {
+  const yBtn = canvas.height - unit * 1.5;
+
+  if (x >= unit * 0.5 && x <= unit * 1.7 && y >= yBtn) {
+    player.x = Math.max(0, player.x - unit * 1.5);
+  } else if (x >= unit * 2.2 && x <= unit * 3.4 && y >= yBtn) {
+    player.x = Math.min(canvas.width - player.width, player.x + unit * 1.5);
+  } else if (x >= canvas.width - unit * 1.7 && x <= canvas.width - unit * 0.5 && y >= yBtn) {
     shoot();
   }
 });
